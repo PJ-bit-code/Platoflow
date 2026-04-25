@@ -1,0 +1,180 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #fff7ed, #fed7aa);
+}
+
+.app {
+  min-height: 100vh;
+  padding: 30px;
+}
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+}
+
+.logo {
+  color: #9a3412;
+}
+
+.card {
+  background: white;
+  border-radius: 25px;
+  padding: 35px;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+  text-align: center;
+}
+
+.hero {
+  margin-top: 70px;
+  padding: 70px 35px;
+}
+
+h1 {
+  font-size: 42px;
+  color: #7c2d12;
+}
+
+p {
+  color: #555;
+}
+
+button {
+  background: #ea580c;
+  color: white;
+  border: none;
+  padding: 13px 25px;
+  margin: 8px;
+  border-radius: 30px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #c2410c;
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: #64748b;
+}
+
+input, select {
+  width: 90%;
+  padding: 14px;
+  margin: 10px;
+  border: 1px solid #ddd;
+  border-radius: 15px;
+  font-size: 16px;
+}
+
+.form-card {
+  max-width: 500px;
+  margin: 40px auto;
+}
+
+.flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 40px 0;
+  font-size: 30px;
+}
+
+.flow-card {
+  background: #ffedd5;
+  padding: 25px;
+  border-radius: 20px;
+  width: 130px;
+}
+
+.flow-card div {
+  font-size: 40px;
+}
+
+.flow-card h3 {
+  margin: 10px 0 0;
+  color: #7c2d12;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 25px;
+}
+
+.item {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 20px;
+  padding: 18px;
+  margin: 15px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item h3 {
+  margin: 0;
+  color: #7c2d12;
+}
+
+.counter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.counter span {
+  font-size: 22px;
+  font-weight: bold;
+  width: 30px;
+}
+
+.counter button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+.summary {
+  height: fit-content;
+}
+
+.qr-box {
+  margin-top: 25px;
+  background: #fff7ed;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.qr-box img {
+  background: white;
+  padding: 12px;
+  border-radius: 15px;
+}
+
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+}
+.clickable {
+  cursor: pointer;
+}
+
+.selected {
+  background: #ffedd5;
+  border: 2px solid #ea580c;
+}
