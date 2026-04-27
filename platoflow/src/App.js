@@ -1,350 +1,306 @@
-import { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Minus,
+  Plus,
+  QrCode,
+  ScanLine,
+  ShieldCheck,
+  ShoppingBag,
+  Utensils,
+  UserRound,
+} from "lucide-react";
 import "./App.css";
 
-function App() {
-  const [page, setPage] = useState(1);
+const menu = {
+  Rice: [
+    { id: "plain-rice", name: "Plain Rice", price: 10 },
+    { id: "java-rice", name: "Java Rice", price: 10 },
+    { id: "garlic-rice", name: "Garlic Rice", price: 10 },
+    { id: "pastil", name: "Pastil", price: 15 },
+  ],
+  Viands: [
+    { id: "fried-chicken", name: "Fried Chicken", price: 15 },
+    { id: "adobo", name: "Chicken Adobo", price: 15 },
+    { id: "hotdog", name: "Hotdog", price: 15 },
+    { id: "egg", name: "Egg", price: 15 },
+  ],
+  Desserts: [
+    { id: "graham", name: "Graham Dessert", price: 15 },
+    { id: "leche-flan", name: "Leche Flan", price: 15 },
+    { id: "fruit-salad", name: "Fruit Salad", price: 15 },
+  ],
+  Drinks: [
+    { id: "water", name: "Bottled Water", price: 15 },
+    { id: "iced-tea", name: "Iced Tea", price: 15 },
+    { id: "juice", name: "Juice", price: 15 },
+    { id: "softdrinks", name: "Soft Drinks", price: 15 },
+  ],
+};
 
-  const [name, setName] = useState("");
-  const [studentId, setStudentId] = useState("");
-  const [program, setProgram] = useState("");
+const programs = [
+  "BS Information Technology",
+  "BS Computer Science",
+  "BS Computer Engineering",
+  "BS Civil Engineering",
+  "BS Agricultural Bio-system Engineering",
+  "BS Information System",
+  "BS Nursing",
+  "BS Accountancy",
+];
 
-  const [selectedRice, setSelectedRice] = useState("");
-  const [riceQty, setRiceQty] = useState(0);
+const flowSteps = [
+  { title: "Select", description: "Choose meals, drinks, desserts, and custom requests.", icon: ShoppingBag },
+  { title: "Generate", description: "Platoflow creates a verified QR code for the order.", icon: QrCode },
+  { title: "Scan", description: "The QR code is scanned at the claiming area.", icon: ScanLine },
+  { title: "Claim", description: "The student receives the prepared food order.", icon: Utensils },
+];
 
-  const [selectedViand, setSelectedViand] = useState("");
-  const [viandQty, setViandQty] = useState(0);
+function makeQrUrl(data) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=${encodeURIComponent(data)}`;
+}
 
-  const [selectedDessert, setSelectedDessert] = useState("");
-  const [dessertQty, setDessertQty] = useState(0);
+export default function App() {
+  const [page, setPage] = useState(0);
+  const [student, setStudent] = useState({ name: "", studentId: "", program: "" });
+  const [cart, setCart] = useState({});
+  const [customItems, setCustomItems] = useState({ Rice: "", Viands: "", Desserts: "", Drinks: "" });
+  const [order, setOrder] = useState(null);
 
-  const [selectedDrink, setSelectedDrink] = useState("");
-  const [drinkQty, setDrinkQty] = useState(0);
+  const allItems = Object.entries(menu).flatMap(([category, items]) =>
+    items.map((item) => ({ ...item, category }))
+  );
 
-  const [showQR, setShowQR] = useState(false);
+  const selectedItems = allItems
+    .map((item) => ({ ...item, quantity: cart[item.id] || 0 }))
+    .filter((item) => item.quantity > 0);
 
-  const totalItems = riceQty + viandQty + dessertQty + drinkQty;
+  const typedItems = Object.entries(customItems)
+    .filter(([, value]) => value.trim())
+    .map(([category, value]) => ({
+      id: `custom-${category}`,
+      category,
+      name: value.trim(),
+      price: category === "Rice" ? 10 : 15,
+      quantity: 1,
+      custom: true,
+    }));
 
-  const qrData = `
-Platoflow Order
-Name: ${name}
-Student ID: ${studentId}
-Program: ${program}
-Rice: ${selectedRice} x ${riceQty}
-Viand: ${selectedViand} x ${viandQty}
-Dessert: ${selectedDessert} x ${dessertQty}
-Drink: ${selectedDrink} x ${drinkQty}
-`;
+  const orderItems = [...selectedItems, ...typedItems];
+  const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const canLogin = student.name.trim() && student.studentId.trim() && student.program;
+  const canGenerate = canLogin && orderItems.length > 0;
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-    qrData
-  )}`;
+  const qrData = useMemo(() => {
+    if (!order) return "";
+    return JSON.stringify({
+      system: "Platoflow",
+      orderId: order.orderId,
+      student: order.student,
+      items: order.items,
+      total: order.total,
+      status: "For claiming",
+    });
+  }, [order]);
+
+  function updateQuantity(id, amount) {
+    setCart((current) => ({ ...current, [id]: Math.max((current[id] || 0) + amount, 0) }));
+  }
+
+  function generateOrder() {
+    if (!canGenerate) return;
+
+    setOrder({
+      orderId: `PF-${Date.now().toString().slice(-6)}`,
+      student: { ...student },
+      items: orderItems,
+      total,
+      createdAt: new Date().toLocaleString(),
+    });
+  }
 
   return (
-    <div className="app">
-      <div className="container">
-        <h2 className="logo">🍽️ Platoflow</h2>
+    <main className="appShell">
+      <div className="orb orbOne" />
+      <div className="orb orbTwo" />
+
+      <section className="layout">
+        <nav className="navGlass">
+          <div className="brandWrap">
+            <div className="brandMark"><Utensils size={24} /></div>
+            <div>
+              <h1>Platoflow</h1>
+              <p>QR-Based Student Food Ordering System</p>
+            </div>
+          </div>
+
+          <div className="navMenu">
+            {["Welcome", "Flow", "Login", "Selection"].map((label, index) => (
+              <button key={label} onClick={() => setPage(index)} className={page === index ? "navActive" : "navItem"}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {page === 0 && (
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="heroPanel gridTwo">
+            <div>
+              <p className="eyebrow">Premium Student Canteen System</p>
+              <h2>Welcome to <span>Platoflow</span></h2>
+              <p className="leadText">
+                A modern food ordering website designed for faster student transactions, organized item selection, and QR-based claiming.
+              </p>
+              <button className="mainButton" onClick={() => setPage(1)}>
+                View System Flow <ArrowRight size={20} />
+              </button>
+            </div>
+
+            <div className="premiumCard">
+              <ShieldCheck size={52} />
+              <h3>Verified Order Experience</h3>
+              <p>Each order is summarized, calculated, and converted into a QR code for smoother claiming.</p>
+            </div>
+          </motion.div>
+        )}
 
         {page === 1 && (
-          <div className="hero card">
-            <h1>Welcome to Platoflow</h1>
-            <p>A QR-based student food ordering system for faster canteen service.</p>
-            <button onClick={() => setPage(2)}>Get Started</button>
-          </div>
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="glassPanel">
+            <div className="sectionHeader">
+              <h2>Flow of the System</h2>
+              <p>Platoflow follows a simple and efficient order process.</p>
+            </div>
+
+            <div className="flowGrid">
+              {flowSteps.map((step, index) => (
+                <div className="flowCard" key={step.title}>
+                  <div className="flowIcon"><step.icon size={38} /></div>
+                  <p>STEP {index + 1}</p>
+                  <h3>{step.title}</h3>
+                  <span>{step.description}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="centerAction">
+              <button className="mainButton" onClick={() => setPage(2)}>Proceed to Login</button>
+            </div>
+          </motion.div>
         )}
 
         {page === 2 && (
-          <div className="card">
-            <h1>Flow of the System</h1>
-
-            <div className="flow">
-              <Flow icon="🛒" title="Select" />
-              <span>→</span>
-              <Flow icon="🔳" title="Generate QR" />
-              <span>→</span>
-              <Flow icon="📱" title="Scan" />
-              <span>→</span>
-              <Flow icon="😋" title="Eat" />
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="loginPanel">
+            <div className="sectionHeader compact">
+              <div className="loginIcon"><UserRound size={34} /></div>
+              <h2>Student Login</h2>
+              <p>Enter your student information to continue.</p>
             </div>
 
-            <button onClick={() => setPage(1)} className="secondary">
-              Back
-            </button>
-            <button onClick={() => setPage(3)}>Next</button>
-          </div>
+            <div className="fieldGroup">
+              <label>Full Name</label>
+              <input placeholder="Enter full name" value={student.name} onChange={(e) => setStudent({ ...student, name: e.target.value })} />
+            </div>
+
+            <div className="fieldGroup">
+              <label>Student ID</label>
+              <input placeholder="Enter student ID" value={student.studentId} onChange={(e) => setStudent({ ...student, studentId: e.target.value })} />
+            </div>
+
+            <div className="fieldGroup">
+              <label>Course / Program</label>
+              <select value={student.program} onChange={(e) => setStudent({ ...student, program: e.target.value })}>
+                <option value="">Select course/program</option>
+                {programs.map((program) => <option key={program} value={program}>{program}</option>)}
+              </select>
+            </div>
+
+            <button disabled={!canLogin} onClick={() => setPage(3)} className="mainButton fullWidth">Continue to Selection</button>
+          </motion.div>
         )}
 
         {page === 3 && (
-          <div className="card form-card">
-            <h1>Student Login</h1>
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="selectionLayout">
+            <div className="glassPanel">
+              <h2>Selection of Items</h2>
+              <p className="muted">Select multiple food items, adjust quantity, or type a custom request.</p>
 
-            <input
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+              {Object.entries(menu).map(([category, items]) => (
+                <section className="menuSection" key={category}>
+                  <div className="menuTitle">
+                    <h3>{category}</h3>
+                    <span>{category === "Rice" ? "₱10 to ₱15" : "₱15 each"}</span>
+                  </div>
 
-            <input
-              placeholder="Student ID"
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-            />
+                  <div className="itemGrid">
+                    {items.map((item) => (
+                      <div className="itemCard" key={item.id}>
+                        <div>
+                          <h4>{item.name}</h4>
+                          <p>₱{item.price} per serving</p>
+                        </div>
+                        <div className="quantityBox">
+                          <button onClick={() => updateQuantity(item.id, -1)}><Minus size={16} /></button>
+                          <strong>{cart[item.id] || 0}</strong>
+                          <button onClick={() => updateQuantity(item.id, 1)}><Plus size={16} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-            <select value={program} onChange={(e) => setProgram(e.target.value)}>
-              <option value="">Select Course / Program</option>
-              <option value="BSCpE">BSCpE</option>
-              <option value="BSCE">BSCE</option>
-              <option value="BSABE">BSABE</option>
-              <option value="BSECE">BSECE</option>
-              <option value="BSIS">BSIS</option>
-              <option value="BSCS">BSCS</option>
-              <option value="BLIS">BLIS</option>
-            </select>
-
-            <button onClick={() => setPage(2)} className="secondary">
-              Back
-            </button>
-
-            <button
-              onClick={() => setPage(4)}
-              disabled={!name || !studentId || !program}
-            >
-              Continue
-            </button>
-          </div>
-        )}
-
-        {page === 4 && (
-          <div className="grid">
-            <div className="card">
-              <h1>Selection of Items</h1>
-              <p>
-                Hello, <b>{name}</b> — {program}
-              </p>
-
-              <div className="item clickable" onClick={() => setPage(6)}>
-                <div>
-                  <h3>🍚 Rice</h3>
-                  <p>
-                    {selectedRice
-                      ? `${selectedRice} — ${riceQty} serving(s)`
-                      : "Click to choose rice"}
-                  </p>
-                </div>
-                <div className="counter">
-                  <span>{riceQty}</span>
-                </div>
-              </div>
-
-              <div className="item clickable" onClick={() => setPage(5)}>
-                <div>
-                  <h3>🍗 Viands</h3>
-                  <p>
-                    {selectedViand
-                      ? `${selectedViand} — ${viandQty} serving(s)`
-                      : "Click to choose viand"}
-                  </p>
-                </div>
-                <div className="counter">
-                  <span>{viandQty}</span>
-                </div>
-              </div>
-
-              <div className="item clickable" onClick={() => setPage(8)}>
-                <div>
-                  <h3>🍰 Desserts</h3>
-                  <p>
-                    {selectedDessert
-                      ? `${selectedDessert} — ${dessertQty} serving(s)`
-                      : "Click to choose dessert"}
-                  </p>
-                </div>
-                <div className="counter">
-                  <span>{dessertQty}</span>
-                </div>
-              </div>
-
-              <div className="item clickable" onClick={() => setPage(7)}>
-                <div>
-                  <h3>🥤 Drinks</h3>
-                  <p>
-                    {selectedDrink
-                      ? `${selectedDrink} — ${drinkQty} serving(s)`
-                      : "Click to choose drink"}
-                  </p>
-                </div>
-                <div className="counter">
-                  <span>{drinkQty}</span>
-                </div>
-              </div>
+                  <div className="fieldGroup customField">
+                    <label>Other {category} Request</label>
+                    <input
+                      placeholder={`Type other ${category.toLowerCase()} request`}
+                      value={customItems[category]}
+                      onChange={(e) => setCustomItems({ ...customItems, [category]: e.target.value })}
+                    />
+                    <small>Custom rice is ₱10. Other custom requests are ₱15.</small>
+                  </div>
+                </section>
+              ))}
             </div>
 
-            <div className="card summary">
-              <h1>Order Summary</h1>
+            <aside className="summaryPanel">
+              <h2>Order Summary</h2>
+              <p className="muted">{student.name || "Student not logged in"}</p>
 
-              <p>Rice: {selectedRice || "None"} x {riceQty}</p>
-              <p>Viand: {selectedViand || "None"} x {viandQty}</p>
-              <p>Dessert: {selectedDessert || "None"} x {dessertQty}</p>
-              <p>Drink: {selectedDrink || "None"} x {drinkQty}</p>
+              <div className="summaryList">
+                {orderItems.length === 0 ? (
+                  <div className="emptyState">No selected items yet.</div>
+                ) : (
+                  orderItems.map((item) => (
+                    <div className="summaryItem" key={item.id}>
+                      <div>
+                        <h4>{item.name}</h4>
+                        <p>{item.category} {item.custom ? "custom request" : "item"}</p>
+                        <small>{item.quantity} serving(s) x ₱{item.price}</small>
+                      </div>
+                      <strong>₱{item.quantity * item.price}</strong>
+                    </div>
+                  ))
+                )}
+              </div>
 
-              <h2>Total Items: {totalItems}</h2>
+              <div className="totalPanel">
+                <span>Total Amount</span>
+                <strong>₱{total}</strong>
+              </div>
 
-              <button onClick={() => setPage(3)} className="secondary">
-                Back
-              </button>
+              <button disabled={!canGenerate} onClick={generateOrder} className="mainButton fullWidth">Generate QR Code</button>
 
-              <button onClick={() => setShowQR(true)} disabled={totalItems === 0}>
-                Generate QR
-              </button>
-
-              {showQR && (
-                <div className="qr-box">
-                  <h2>Your QR Code</h2>
-                  <img src={qrUrl} alt="Platoflow QR Code" />
-                  <p>Show this QR code at the claiming counter.</p>
+              {order && (
+                <div className="qrPanel">
+                  <h3>QR Code Generated</h3>
+                  <img src={makeQrUrl(qrData)} alt="Order QR Code" />
+                  <p>Order ID: {order.orderId}</p>
+                  <small>Present this QR code at the claiming area.</small>
                 </div>
               )}
-            </div>
-          </div>
+            </aside>
+          </motion.div>
         )}
-
-        {page === 5 && (
-          <SelectionPage
-            title="Choose Your Viand"
-            items={[
-              "Fried Chicken",
-              "Chicken Adobo",
-              "Beef Steak",
-              "Bulalo",
-              "Chicken Teriyaki",
-            ]}
-            selected={selectedViand}
-            setSelected={setSelectedViand}
-            qty={viandQty}
-            setQty={setViandQty}
-            backPage={4}
-            setPage={setPage}
-          />
-        )}
-
-        {page === 6 && (
-          <SelectionPage
-            title="Choose Your Rice"
-            items={["Plain Rice", "Pastil", "Spicy Pastil"]}
-            selected={selectedRice}
-            setSelected={setSelectedRice}
-            qty={riceQty}
-            setQty={setRiceQty}
-            backPage={4}
-            setPage={setPage}
-          />
-        )}
-
-        {page === 7 && (
-          <SelectionPage
-            title="Choose Your Drink"
-            items={["Coke", "Pepsi", "Royal", "Royal Lemon", "Mountain Dew"]}
-            selected={selectedDrink}
-            setSelected={setSelectedDrink}
-            qty={drinkQty}
-            setQty={setDrinkQty}
-            backPage={4}
-            setPage={setPage}
-          />
-        )}
-
-        {page === 8 && (
-          <SelectionPage
-            title="Choose Your Dessert"
-            items={["Graham Bar", "Cheese Bar", "Banana Cue", "Turon", "Sandwich"]}
-            selected={selectedDessert}
-            setSelected={setSelectedDessert}
-            qty={dessertQty}
-            setQty={setDessertQty}
-            backPage={4}
-            setPage={setPage}
-          />
-        )}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
-
-function Flow({ icon, title }) {
-  return (
-    <div className="flow-card">
-      <div>{icon}</div>
-      <h3>{title}</h3>
-    </div>
-  );
-}
-
-function SelectionPage({
-  title,
-  items,
-  selected,
-  setSelected,
-  qty,
-  setQty,
-  backPage,
-  setPage,
-}) {
-  return (
-    <div className="card">
-      <h1>{title}</h1>
-      <p>Select one item and choose how many servings.</p>
-
-      {items.map((item) => {
-        const isSelected = selected === item;
-
-        return (
-          <div
-            key={item}
-            className={isSelected ? "item selected" : "item clickable"}
-            onClick={() => {
-              setSelected(item);
-              if (!isSelected) setQty(1);
-            }}
-          >
-            <div>
-              <h3>🍽️ {item}</h3>
-              <p>{isSelected ? "Selected" : "Click to select"}</p>
-            </div>
-
-            <div className="counter">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isSelected) setQty(Math.max(0, qty - 1));
-                }}
-              >
-                -
-              </button>
-
-              <span>{isSelected ? qty : 0}</span>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelected(item);
-                  setQty(isSelected ? qty + 1 : 1);
-                }}
-              >
-                +
-              </button>
-            </div>
-          </div>
-        );
-      })}
-
-      <button onClick={() => setPage(backPage)} className="secondary">
-        Back
-      </button>
-
-      <button onClick={() => setPage(backPage)} disabled={!selected || qty === 0}>
-        Confirm
-      </button>
-    </div>
-  );
-}
-
-export default App;
