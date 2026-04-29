@@ -93,16 +93,29 @@ export default function App() {
   const canGenerate = canLogin && orderItems.length > 0;
 
   const qrData = useMemo(() => {
-    if (!order) return "";
-    return JSON.stringify({
-      system: "Platoflow",
-      orderId: order.orderId,
-      student: order.student,
-      items: order.items,
-      total: order.total,
-      status: "For claiming",
-    });
-  }, [order]);
+  if (!order) return "";
+
+  const itemLines = order.items
+    .map((item) => `${item.name} x${item.quantity} - ₱${item.price * item.quantity}`)
+    .join("\n");
+
+  return `PLATOFLOW RECEIPT
+
+Order ID: ${order.orderId}
+Date: ${order.createdAt}
+Status: For claiming
+
+Student Name: ${order.student.name}
+Student ID: ${order.student.studentId}
+Program: ${order.student.program}
+
+Items Ordered:
+${itemLines}
+
+Total Amount: ₱${order.total}
+
+Please present this receipt at the claiming area.`;
+}, [order]);
 
   function updateQuantity(id, amount) {
     setCart((current) => ({ ...current, [id]: Math.max((current[id] || 0) + amount, 0) }));
