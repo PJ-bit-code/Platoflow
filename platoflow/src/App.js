@@ -161,9 +161,9 @@ export default function App() {
       status: "For claiming",
     };
 
-    return `"https://platoflow.vercel.app"=${encodeURIComponent(
-      JSON.stringify(receiptData)
-    )}`;
+    return `https://platoflow.vercel.app/receipt?data=${encodeURIComponent(
+  JSON.stringify(receiptData)
+)}`;
   }, [order]);
 
   function updateQuantity(id, amount) {
