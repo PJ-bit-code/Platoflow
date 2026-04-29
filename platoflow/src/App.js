@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import "./App.css";
 
+const LIVE_URL = "https://platoflow.vercel.app";
+
 const menu = {
   Rice: [
     { id: "plain-rice", name: "Plain Rice", price: 10 },
@@ -60,70 +62,80 @@ function makeQrUrl(data) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=230x230&data=${encodeURIComponent(data)}`;
 }
 
-export default function App() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const receiptParam = urlParams.get("data");
+function ReceiptPage({ receipt }) {
+  return (
+    <main className="appShell receiptShell">
+      <div className="orb orbOne" />
+      <div className="orb orbTwo" />
 
-  if (window.location.pathname === "/receipt" && receiptParam) {
-    try {
-      const receipt = JSON.parse(decodeURIComponent(receiptParam));
+      <section className="receiptCard">
+        <div className="receiptHeader">
+          <div className="brandMark">
+            <Utensils size={26} />
+          </div>
+          <div>
+            <h1>Platoflow Receipt</h1>
+            <p>QR-Based Student Food Ordering System</p>
+          </div>
+        </div>
 
-      return (
-        <main className="appShell receiptShell">
-          <div className="orb orbOne" />
-          <div className="orb orbTwo" />
+        <div className="receiptStatus">{receipt.status}</div>
 
-          <section className="receiptCard">
-            <div className="receiptHeader">
-              <div className="brandMark"><Utensils size={26} /></div>
+        <div className="receiptInfo">
+          <p><span>Order ID</span><strong>{receipt.orderId}</strong></p>
+          <p><span>Date</span><strong>{receipt.date}</strong></p>
+          <p><span>Student Name</span><strong>{receipt.student.name}</strong></p>
+          <p><span>Student ID</span><strong>{receipt.student.studentId}</strong></p>
+          <p><span>Program</span><strong>{receipt.student.program}</strong></p>
+        </div>
+
+        <div className="receiptItems">
+          <h2>Items Ordered</h2>
+          {receipt.items.map((item, index) => (
+            <div className="receiptItem" key={index}>
               <div>
-                <h1>Platoflow Receipt</h1>
-                <p>QR-Based Student Food Ordering System</p>
+                <h3>{item.name}</h3>
+                <p>{item.quantity} serving(s) x ₱{item.price}</p>
               </div>
+              <strong>₱{item.quantity * item.price}</strong>
             </div>
+          ))}
+        </div>
 
-            <div className="receiptStatus">{receipt.status}</div>
+        <div className="receiptTotal">
+          <span>Total Amount</span>
+          <strong>₱{receipt.total}</strong>
+        </div>
 
-            <div className="receiptInfo">
-              <p><span>Order ID</span><strong>{receipt.orderId}</strong></p>
-              <p><span>Date</span><strong>{receipt.date}</strong></p>
-              <p><span>Student Name</span><strong>{receipt.student.name}</strong></p>
-              <p><span>Student ID</span><strong>{receipt.student.studentId}</strong></p>
-              <p><span>Program</span><strong>{receipt.student.program}</strong></p>
-            </div>
+        <p className="receiptNote">Please present this receipt at the claiming area.</p>
+      </section>
+    </main>
+  );
+}
 
-            <div className="receiptItems">
-              <h2>Items Ordered</h2>
-              {receipt.items.map((item, index) => (
-                <div className="receiptItem" key={index}>
-                  <div>
-                    <h3>{item.name}</h3>
-                    <p>{item.quantity} serving(s) x ₱{item.price}</p>
-                  </div>
-                  <strong>₱{item.quantity * item.price}</strong>
-                </div>
-              ))}
-            </div>
-
-            <div className="receiptTotal">
-              <span>Total Amount</span>
-              <strong>₱{receipt.total}</strong>
-            </div>
-
-            <p className="receiptNote">Please present this receipt at the claiming area.</p>
-          </section>
-        </main>
-      );
-    } catch (error) {
-      return <main className="appShell"><section className="receiptCard"><h1>Invalid Receipt</h1></section></main>;
-    }
-  }
-
+export default function App() {
   const [page, setPage] = useState(0);
   const [student, setStudent] = useState({ name: "", studentId: "", program: "" });
   const [cart, setCart] = useState({});
-  const [customItems, setCustomItems] = useState({ Rice: "", Viands: "", Desserts: "", Drinks: "" });
+  const [customItems, setCustomItems] = useState({
+    Rice: "",
+    Viands: "",
+    Desserts: "",
+    Drinks: "",
+  });
   const [order, setOrder] = useState(null);
+
+  const receiptParam = new URLSearchParams(window.location.search).get("data");
+
+  const receiptFromUrl = useMemo(() => {
+    if (!window.location.href.includes("/receipt") || !receiptParam) return null;
+
+    try {
+      return JSON.parse(decodeURIComponent(receiptParam));
+    } catch {
+      return "invalid";
+    }
+  }, [receiptParam]);
 
   const allItems = Object.entries(menu).flatMap(([category, items]) =>
     items.map((item) => ({ ...item, category }))
@@ -161,13 +173,14 @@ export default function App() {
       status: "For claiming",
     };
 
-    return `https://platoflow.vercel.app/receipt?data=${encodeURIComponent(
-  JSON.stringify(receiptData)
-)}`;
+    return `${LIVE_URL}/receipt?data=${encodeURIComponent(JSON.stringify(receiptData))}`;
   }, [order]);
 
   function updateQuantity(id, amount) {
-    setCart((current) => ({ ...current, [id]: Math.max((current[id] || 0) + amount, 0) }));
+    setCart((current) => ({
+      ...current,
+      [id]: Math.max((current[id] || 0) + amount, 0),
+    }));
   }
 
   function generateOrder() {
@@ -182,6 +195,20 @@ export default function App() {
     });
   }
 
+  if (receiptFromUrl && receiptFromUrl !== "invalid") {
+    return <ReceiptPage receipt={receiptFromUrl} />;
+  }
+
+  if (receiptFromUrl === "invalid") {
+    return (
+      <main className="appShell receiptShell">
+        <section className="receiptCard">
+          <h1>Invalid Receipt</h1>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="appShell">
       <div className="orb orbOne" />
@@ -190,7 +217,9 @@ export default function App() {
       <section className="layout">
         <nav className="navGlass">
           <div className="brandWrap">
-            <div className="brandMark"><Utensils size={24} /></div>
+            <div className="brandMark">
+              <Utensils size={24} />
+            </div>
             <div>
               <h1>Platoflow</h1>
               <p>QR-Based Student Food Ordering System</p>
@@ -199,7 +228,11 @@ export default function App() {
 
           <div className="navMenu">
             {["Welcome", "Flow", "Login", "Selection"].map((label, index) => (
-              <button key={label} onClick={() => setPage(index)} className={page === index ? "navActive" : "navItem"}>
+              <button
+                key={label}
+                onClick={() => setPage(index)}
+                className={page === index ? "navActive" : "navItem"}
+              >
                 {label}
               </button>
             ))}
@@ -210,7 +243,9 @@ export default function App() {
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="heroPanel gridTwo">
             <div>
               <p className="eyebrow">Premium Student Canteen System</p>
-              <h2>Welcome to <span>Platoflow</span></h2>
+              <h2>
+                Welcome to <span>Platoflow</span>
+              </h2>
               <p className="leadText">
                 A modern food ordering website designed for faster student transactions, organized item selection, and QR-based claiming.
               </p>
@@ -237,7 +272,9 @@ export default function App() {
             <div className="flowGrid">
               {flowSteps.map((step, index) => (
                 <div className="flowCard" key={step.title}>
-                  <div className="flowIcon"><step.icon size={38} /></div>
+                  <div className="flowIcon">
+                    <step.icon size={38} />
+                  </div>
                   <p>STEP {index + 1}</p>
                   <h3>{step.title}</h3>
                   <span>{step.description}</span>
@@ -246,7 +283,9 @@ export default function App() {
             </div>
 
             <div className="centerAction">
-              <button className="mainButton" onClick={() => setPage(2)}>Proceed to Login</button>
+              <button className="mainButton" onClick={() => setPage(2)}>
+                Proceed to Login
+              </button>
             </div>
           </motion.div>
         )}
@@ -254,30 +293,49 @@ export default function App() {
         {page === 2 && (
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="loginPanel">
             <div className="sectionHeader compact">
-              <div className="loginIcon"><UserRound size={34} /></div>
+              <div className="loginIcon">
+                <UserRound size={34} />
+              </div>
               <h2>Student Login</h2>
               <p>Enter your student information to continue.</p>
             </div>
 
             <div className="fieldGroup">
               <label>Full Name</label>
-              <input placeholder="Enter full name" value={student.name} onChange={(e) => setStudent({ ...student, name: e.target.value })} />
+              <input
+                placeholder="Enter full name"
+                value={student.name}
+                onChange={(e) => setStudent({ ...student, name: e.target.value })}
+              />
             </div>
 
             <div className="fieldGroup">
               <label>Student ID</label>
-              <input placeholder="Enter student ID" value={student.studentId} onChange={(e) => setStudent({ ...student, studentId: e.target.value })} />
+              <input
+                placeholder="Enter student ID"
+                value={student.studentId}
+                onChange={(e) => setStudent({ ...student, studentId: e.target.value })}
+              />
             </div>
 
             <div className="fieldGroup">
               <label>Course / Program</label>
-              <select value={student.program} onChange={(e) => setStudent({ ...student, program: e.target.value })}>
+              <select
+                value={student.program}
+                onChange={(e) => setStudent({ ...student, program: e.target.value })}
+              >
                 <option value="">Select course/program</option>
-                {programs.map((program) => <option key={program} value={program}>{program}</option>)}
+                {programs.map((program) => (
+                  <option key={program} value={program}>
+                    {program}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <button disabled={!canLogin} onClick={() => setPage(3)} className="mainButton fullWidth">Continue to Selection</button>
+            <button disabled={!canLogin} onClick={() => setPage(3)} className="mainButton fullWidth">
+              Continue to Selection
+            </button>
           </motion.div>
         )}
 
@@ -302,9 +360,13 @@ export default function App() {
                           <p>₱{item.price} per serving</p>
                         </div>
                         <div className="quantityBox">
-                          <button onClick={() => updateQuantity(item.id, -1)}><Minus size={16} /></button>
+                          <button onClick={() => updateQuantity(item.id, -1)}>
+                            <Minus size={16} />
+                          </button>
                           <strong>{cart[item.id] || 0}</strong>
-                          <button onClick={() => updateQuantity(item.id, 1)}><Plus size={16} /></button>
+                          <button onClick={() => updateQuantity(item.id, 1)}>
+                            <Plus size={16} />
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -335,8 +397,12 @@ export default function App() {
                     <div className="summaryItem" key={item.id}>
                       <div>
                         <h4>{item.name}</h4>
-                        <p>{item.category} {item.custom ? "custom request" : "item"}</p>
-                        <small>{item.quantity} serving(s) x ₱{item.price}</small>
+                        <p>
+                          {item.category} {item.custom ? "custom request" : "item"}
+                        </p>
+                        <small>
+                          {item.quantity} serving(s) x ₱{item.price}
+                        </small>
                       </div>
                       <strong>₱{item.quantity * item.price}</strong>
                     </div>
@@ -349,7 +415,9 @@ export default function App() {
                 <strong>₱{total}</strong>
               </div>
 
-              <button disabled={!canGenerate} onClick={generateOrder} className="mainButton fullWidth">Generate QR Code</button>
+              <button disabled={!canGenerate} onClick={generateOrder} className="mainButton fullWidth">
+                Generate QR Code
+              </button>
 
               {order && (
                 <div className="qrPanel">
