@@ -40,14 +40,13 @@ const menu = {
 };
 
 const programs = [
-  "BS Information Technology",
-  "BS Computer Science",
   "BS Computer Engineering",
   "BS Civil Engineering",
-  "BS Agricultural Bio-system Engineering",
+  "BS ABE",
+  "BS Electronics Engineering",
+  "BLIS",
+  "BS Computer Science",
   "BS Information System",
-  "BS Nursing",
-  "BS Accountancy",
 ];
 
 const flowSteps = [
@@ -62,6 +61,64 @@ function makeQrUrl(data) {
 }
 
 export default function App() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const receiptParam = urlParams.get("data");
+
+  if (window.location.pathname === "/receipt" && receiptParam) {
+    try {
+      const receipt = JSON.parse(decodeURIComponent(receiptParam));
+
+      return (
+        <main className="appShell receiptShell">
+          <div className="orb orbOne" />
+          <div className="orb orbTwo" />
+
+          <section className="receiptCard">
+            <div className="receiptHeader">
+              <div className="brandMark"><Utensils size={26} /></div>
+              <div>
+                <h1>Platoflow Receipt</h1>
+                <p>QR-Based Student Food Ordering System</p>
+              </div>
+            </div>
+
+            <div className="receiptStatus">{receipt.status}</div>
+
+            <div className="receiptInfo">
+              <p><span>Order ID</span><strong>{receipt.orderId}</strong></p>
+              <p><span>Date</span><strong>{receipt.date}</strong></p>
+              <p><span>Student Name</span><strong>{receipt.student.name}</strong></p>
+              <p><span>Student ID</span><strong>{receipt.student.studentId}</strong></p>
+              <p><span>Program</span><strong>{receipt.student.program}</strong></p>
+            </div>
+
+            <div className="receiptItems">
+              <h2>Items Ordered</h2>
+              {receipt.items.map((item, index) => (
+                <div className="receiptItem" key={index}>
+                  <div>
+                    <h3>{item.name}</h3>
+                    <p>{item.quantity} serving(s) x ₱{item.price}</p>
+                  </div>
+                  <strong>₱{item.quantity * item.price}</strong>
+                </div>
+              ))}
+            </div>
+
+            <div className="receiptTotal">
+              <span>Total Amount</span>
+              <strong>₱{receipt.total}</strong>
+            </div>
+
+            <p className="receiptNote">Please present this receipt at the claiming area.</p>
+          </section>
+        </main>
+      );
+    } catch (error) {
+      return <main className="appShell"><section className="receiptCard"><h1>Invalid Receipt</h1></section></main>;
+    }
+  }
+
   const [page, setPage] = useState(0);
   const [student, setStudent] = useState({ name: "", studentId: "", program: "" });
   const [cart, setCart] = useState({});
@@ -93,29 +150,21 @@ export default function App() {
   const canGenerate = canLogin && orderItems.length > 0;
 
   const qrData = useMemo(() => {
-  if (!order) return "";
+    if (!order) return "";
 
-  const itemLines = order.items
-    .map((item) => `${item.name} x${item.quantity} - ₱${item.price * item.quantity}`)
-    .join("\n");
+    const receiptData = {
+      orderId: order.orderId,
+      date: order.createdAt,
+      student: order.student,
+      items: order.items,
+      total: order.total,
+      status: "For claiming",
+    };
 
-  return `PLATOFLOW RECEIPT
-
-Order ID: ${order.orderId}
-Date: ${order.createdAt}
-Status: For claiming
-
-Student Name: ${order.student.name}
-Student ID: ${order.student.studentId}
-Program: ${order.student.program}
-
-Items Ordered:
-${itemLines}
-
-Total Amount: ₱${order.total}
-
-Please present this receipt at the claiming area.`;
-}, [order]);
+    return `"https://platoflow.vercel.app"=${encodeURIComponent(
+      JSON.stringify(receiptData)
+    )}`;
+  }, [order]);
 
   function updateQuantity(id, amount) {
     setCart((current) => ({ ...current, [id]: Math.max((current[id] || 0) + amount, 0) }));
