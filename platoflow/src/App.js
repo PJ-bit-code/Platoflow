@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { db } from "./firebase";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 import {
   ArrowRight,
   Minus,
@@ -117,8 +119,10 @@ function ReceiptPage({ receipt }) {
 export default function App() {
   const [page, setPage] = useState(0);
   const [student, setStudent] = useState({ name: "", studentId: "", program: "" });
+  const [ordersList, setOrdersList] = useState([]);
   const [cart, setCart] = useState({});
   const [customItems, setCustomItems] = useState({
+  
     Rice: "",
     Viands: "",
     Desserts: "",
@@ -187,18 +191,44 @@ export default function App() {
     }));
   }
 
-  function generateOrder() {
-    if (!canGenerate) return;
+  async function generateOrder() {
+  if (!canGenerate) return;
 
-    setOrder({
-      orderId: `PF-${Date.now().toString().slice(-6)}`,
-      student: { ...student },
-      items: orderItems,
-      total,
-      paymentMethod,
-      createdAt: new Date().toLocaleString(),
-    });
+  const newOrder = {
+    orderId: `PF-${Date.now().toString().slice(-6)}`,
+    student: { ...student },
+    items: orderItems,
+    total,
+    paymentMethod,
+    status: "Pending",
+    createdAt: new Date().toLocaleString(),
+  };
+
+  try {
+    await addDoc(collection(db, "orders"), newOrder);
+    setOrder(newOrder);
+    alert("Order saved successfully.");
+  } catch (error) {
+    console.error("Error saving order:", error);
+    alert("Order could not be saved. Please try again.");
   }
+}
+
+async function fetchOrders() {
+  try {
+    const querySnapshot = await getDocs(collection(db, "orders"));
+    const orders = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    setOrdersList(orders);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    alert("Could not load orders.");
+  }
+}
+
 
   if (receiptFromUrl && receiptFromUrl !== "invalid") {
     return <ReceiptPage receipt={receiptFromUrl} />;
@@ -232,7 +262,7 @@ export default function App() {
           </div>
 
           <div className="navMenu">
-            {["Welcome", "Flow", "Login", "Selection"].map((label, index) => (
+            {["Welcome", "Flow", "Login", "Selection", "Admin"].map((label, index) => (
               <button
                 key={label}
                 onClick={() => setPage(index)}
@@ -463,6 +493,39 @@ export default function App() {
             </aside>
           </motion.div>
         )}
+        {page === 4 && (
+  <motion.div
+    initial={{ opacity: 0, y: 24 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="glassPanel"
+  >
+    <h2>Admin Panel</h2>
+    <p className="muted">View all saved student orders from Firebase.</p>
+
+    <button className="mainButton" onClick={fetchOrders}>
+      Load Orders
+    </button>
+
+    <div className="summaryList">
+      {ordersList.length === 0 ? (
+        <div className="emptyState">No orders loaded yet.</div>
+      ) : (
+        ordersList.map((order) => (
+          <div className="summaryItem" key={order.id}>
+            <div>
+              <h4>{order.student?.name}</h4>
+              <p>{order.student?.program}</p>
+              <small>
+                {order.paymentMethod} • {order.status}
+              </small>
+            </div>
+            <strong>₱{order.total}</strong>
+          </div>
+        ))
+      )}
+    </div>
+  </motion.div>
+)}
       </section>
     </main>
   );
