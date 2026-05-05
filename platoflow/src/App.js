@@ -52,10 +52,10 @@ const programs = [
 ];
 
 const flowSteps = [
-  { title: "Select", description: "Choose meals, drinks, desserts, and custom requests.", icon: ShoppingBag },
-  { title: "Generate", description: "Platoflow creates a verified QR code for the order.", icon: QrCode },
-  { title: "Scan", description: "The QR code is scanned at the claiming area.", icon: ScanLine },
-  { title: "Claim", description: "The student receives the prepared food order.", icon: Utensils },
+  { title: "Select", description: "Choose food items and payment method.", icon: ShoppingBag },
+  { title: "Generate", description: "Platoflow creates a QR receipt link.", icon: QrCode },
+  { title: "Scan", description: "Scan the QR to view the receipt webpage.", icon: ScanLine },
+  { title: "Claim", description: "Present the receipt at the claiming area.", icon: Utensils },
 ];
 
 function makeQrUrl(data) {
@@ -87,6 +87,7 @@ function ReceiptPage({ receipt }) {
           <p><span>Student Name</span><strong>{receipt.student.name}</strong></p>
           <p><span>Student ID</span><strong>{receipt.student.studentId}</strong></p>
           <p><span>Program</span><strong>{receipt.student.program}</strong></p>
+          <p><span>Payment</span><strong>{receipt.paymentMethod}</strong></p>
         </div>
 
         <div className="receiptItems">
@@ -123,6 +124,7 @@ export default function App() {
     Desserts: "",
     Drinks: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [order, setOrder] = useState(null);
 
   const receiptParam = new URLSearchParams(window.location.search).get("data");
@@ -158,8 +160,9 @@ export default function App() {
 
   const orderItems = [...selectedItems, ...typedItems];
   const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
   const canLogin = student.name.trim() && student.studentId.trim() && student.program;
-  const canGenerate = canLogin && orderItems.length > 0;
+  const canGenerate = canLogin && orderItems.length > 0 && paymentMethod;
 
   const qrData = useMemo(() => {
     if (!order) return "";
@@ -170,6 +173,7 @@ export default function App() {
       student: order.student,
       items: order.items,
       total: order.total,
+      paymentMethod: order.paymentMethod,
       status: "For claiming",
     };
 
@@ -191,6 +195,7 @@ export default function App() {
       student: { ...student },
       items: orderItems,
       total,
+      paymentMethod,
       createdAt: new Date().toLocaleString(),
     });
   }
@@ -247,7 +252,7 @@ export default function App() {
                 Welcome to <span>Platoflow</span>
               </h2>
               <p className="leadText">
-                A modern food ordering website designed for faster student transactions, organized item selection, and QR-based claiming.
+                A modern food ordering website designed for faster student transactions, organized item selection, payment method, and QR-based claiming.
               </p>
               <button className="mainButton" onClick={() => setPage(1)}>
                 View System Flow <ArrowRight size={20} />
@@ -257,7 +262,7 @@ export default function App() {
             <div className="premiumCard">
               <ShieldCheck size={52} />
               <h3>Verified Order Experience</h3>
-              <p>Each order is summarized, calculated, and converted into a QR code for smoother claiming.</p>
+              <p>Each order is summarized, calculated, and converted into a QR receipt link.</p>
             </div>
           </motion.div>
         )}
@@ -409,6 +414,34 @@ export default function App() {
                   ))
                 )}
               </div>
+
+              <div className="fieldGroup">
+                <label>Mode of Payment</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="">Select payment method</option>
+                  <option value="Cash">Cash</option>
+                  <option value="GCash">GCash</option>
+                </select>
+              </div>
+
+              {paymentMethod === "GCash" && (
+                <div className="gcashBox">
+                  <h3>GCash Payment</h3>
+                  <p>Scan this QR code to pay.</p>
+                  <img src="/gcash-qr.png" alt="GCash QR Code" />
+                  <p className="gcashNote">Please present proof of payment upon claiming.</p>
+                </div>
+              )}
+
+              {paymentMethod && (
+                <div className="summaryItem">
+                  <span>Payment</span>
+                  <strong>{paymentMethod}</strong>
+                </div>
+              )}
 
               <div className="totalPanel">
                 <span>Total Amount</span>
